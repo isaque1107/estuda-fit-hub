@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace Cobranca\Support;
 
+use Cobranca\Contracts\NotificadorDeInadimplencia;
 use RuntimeException;
 
-class Monolito
+final class Monolito implements NotificadorDeInadimplencia
 {
     private const TIMEOUT_EM_SEGUNDOS = 5;
 

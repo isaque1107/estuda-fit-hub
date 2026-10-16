@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Cobranca\Services;
 
+use Cobranca\Contracts\GatewayDePagamento;
 use Cobranca\Support\Database;
 use Cobranca\Support\Gateway;
 use Cobranca\Support\HttpException;
@@ -12,7 +13,7 @@ use Throwable;
 
 final class EmitirFatura
 {
-    public function __construct(private readonly Gateway $gateway = new Gateway())
+    public function __construct(private readonly GatewayDePagamento $gateway = new Gateway())
     {
     }
 

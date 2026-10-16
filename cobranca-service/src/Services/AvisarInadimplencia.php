@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace Cobranca\Services;
 
+use Cobranca\Contracts\NotificadorDeInadimplencia;
 use Cobranca\Support\Database;
 use Cobranca\Support\Monolito;
 
 final class AvisarInadimplencia
 {
-    public function __construct(private readonly Monolito $monolito = new Monolito())
+    public function __construct(private readonly NotificadorDeInadimplencia $monolito = new Monolito())
     {
     }
 

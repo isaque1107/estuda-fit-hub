@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Cobranca\Support;
 
-final class Gateway
+use Cobranca\Contracts\GatewayDePagamento;
+
+final class Gateway implements GatewayDePagamento
 {
     public function registrarCobranca(int $faturaId): string
     {
