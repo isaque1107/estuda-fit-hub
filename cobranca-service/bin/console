@@ -1,0 +1,23 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+require __DIR__ . '/../bootstrap.php';
+
+use Cobranca\Console\Migrar;
+use Cobranca\Console\Varredura;
+
+$comandos = [
+    'db:migrate' => Migrar::class,
+    'cobranca:varredura' => Varredura::class,
+];
+
+$nome = $argv[1] ?? '';
+
+if (! isset($comandos[$nome])) {
+    fwrite(STDERR, 'Comandos disponíveis: ' . implode(', ', array_keys($comandos)) . PHP_EOL);
+    exit(1);
+}
+
+exit((new $comandos[$nome]())->executar());

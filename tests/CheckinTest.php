@@ -5,6 +5,7 @@ declare(strict_types=1);
 use EstudaFitHub\Controllers\CheckinController;
 use EstudaFitHub\Http\Request;
 use EstudaFitHub\Models\Checkin;
+use EstudaFitHub\Services\AplicarAvisoDeCobranca;
 use EstudaFitHub\Support\HttpException;
 
 final class CheckinTest extends TestCase
@@ -16,11 +17,15 @@ final class CheckinTest extends TestCase
         return (new CheckinController())->registrar($request)->dados();
     }
 
+    private function avisarAtraso(int $alunoId, int $dias): void
+    {
+        (new AplicarAvisoDeCobranca())->executar($alunoId, $dias);
+    }
+
     public function testAlunoEmDiaEhLiberado(): void
     {
         $aluno = $this->criarAluno();
-        $matricula = $this->criarMatricula($aluno);
-        $this->criarFatura($matricula, ['status' => 'aberta']);
+        $this->criarMatricula($aluno);
 
         $resposta = $this->checkin($aluno->cpf, (int) $aluno->unidade_id);
 
@@ -29,27 +34,59 @@ final class CheckinTest extends TestCase
         $this->assertSame(1, Checkin::where('aluno_id', $aluno->id)->where('liberado', 1)->count());
     }
 
-    public function testFaturaVencidaHaMaisDeCincoDiasBloqueiaCatraca(): void
+    public function testAtrasoAcimaDaToleranciaBloqueiaCatraca(): void
     {
         $aluno = $this->criarAluno();
-        $matricula = $this->criarMatricula($aluno);
-        $this->criarFatura($matricula, ['status' => 'vencida', 'vencimento' => $this->diasAtras(10)]);
+        $this->criarMatricula($aluno);
+
+        $this->avisarAtraso((int) $aluno->id, 10);
 
         $resposta = $this->checkin($aluno->cpf, (int) $aluno->unidade_id);
 
         $this->assertFalse($resposta['liberado']);
-        $this->assertSame('inadimplente', $resposta['motivo_bloqueio']);
+        $this->assertSame('situacao_bloqueado', $resposta['motivo_bloqueio']);
     }
 
-    public function testFaturaVencidaRecenteAindaLibera(): void
+    public function testAtrasoDentroDaToleranciaLibera(): void
+    {
+        $aluno = $this->criarAluno();
+        $this->criarMatricula($aluno);
+
+        $this->avisarAtraso((int) $aluno->id, 5);
+
+        $this->assertTrue($this->checkin($aluno->cpf, (int) $aluno->unidade_id)['liberado']);
+    }
+
+    public function testQuitacaoLiberaACatracaNovamente(): void
+    {
+        $aluno = $this->criarAluno();
+        $this->criarMatricula($aluno);
+
+        $this->avisarAtraso((int) $aluno->id, 10);
+        $this->assertFalse($this->checkin($aluno->cpf, (int) $aluno->unidade_id)['liberado']);
+
+        $this->avisarAtraso((int) $aluno->id, 0);
+        $this->assertTrue($this->checkin($aluno->cpf, (int) $aluno->unidade_id)['liberado']);
+    }
+
+    public function testCheckinNaoConsultaMaisATabelaDeFaturas(): void
     {
         $aluno = $this->criarAluno();
         $matricula = $this->criarMatricula($aluno);
-        $this->criarFatura($matricula, ['status' => 'vencida', 'vencimento' => $this->diasAtras(2)]);
+        $this->criarFatura($matricula, ['status' => 'vencida', 'vencimento' => $this->diasAtras(30)]);
 
         $resposta = $this->checkin($aluno->cpf, (int) $aluno->unidade_id);
 
-        $this->assertTrue($resposta['liberado'], 'Tolerância de 5 dias deve liberar');
+        $this->assertTrue($resposta['liberado'], 'Sem aviso de Cobrança, a catraca libera');
+    }
+
+    public function testAvisoDeCobrancaNaoReativaAlunoInativo(): void
+    {
+        $aluno = $this->criarAluno(['situacao' => 'inativo']);
+
+        $this->avisarAtraso((int) $aluno->id, 0);
+
+        $this->assertSame('inativo', $aluno->refresh()->situacao);
     }
 
     public function testAlunoBloqueadoNaoEntraMesmoSemFaturaVencida(): void

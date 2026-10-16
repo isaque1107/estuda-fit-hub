@@ -8,7 +8,6 @@ use EstudaFitHub\Http\Request;
 use EstudaFitHub\Http\Response;
 use EstudaFitHub\Models\Aluno;
 use EstudaFitHub\Models\Checkin;
-use EstudaFitHub\Models\Fatura;
 use EstudaFitHub\Support\HttpException;
 
 /**
@@ -26,18 +25,8 @@ final class CheckinController
             throw new HttpException(404, 'Aluno não encontrado');
         }
 
-        // Acoplamento: regra de negócio de Cobrança embutida no Check-in.
-        $inadimplente = Fatura::where('aluno_id', $aluno->id)
-            ->where('status', 'vencida')
-            ->where('vencimento', '<', date('Y-m-d', strtotime('-5 days')))
-            ->exists();
-
-        $liberado = $aluno->situacao === 'ativo' && !$inadimplente;
-
-        $motivo = null;
-        if (!$liberado) {
-            $motivo = $aluno->situacao !== 'ativo' ? 'situacao_' . $aluno->situacao : 'inadimplente';
-        }
+        $liberado = $aluno->situacao === 'ativo';
+        $motivo = $liberado ? null : 'situacao_' . $aluno->situacao;
 
         $checkin = Checkin::create([
             'aluno_id' => $aluno->id,

@@ -19,6 +19,43 @@ services:
       db:
         condition: service_healthy
 
+  cobranca:
+    build: ./cobranca-service
+    container_name: estuda-fit-hub-cobranca
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./cobranca-service:/app
+    environment:
+      DB_HOST: cobranca-db
+      DB_PORT: "3306"
+      DB_NAME: cobranca
+      DB_USER: cobranca
+      DB_PASS: cobranca
+      GATEWAY_LATENCIA_MS: "2"
+      MONOLITO_URL: http://app:8080
+    depends_on:
+      cobranca-db:
+        condition: service_healthy
+
+  cobranca-db:
+    image: mysql:8.4
+    container_name: estuda-fit-hub-cobranca-db
+    ports:
+      - "3317:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: cobranca
+      MYSQL_USER: cobranca
+      MYSQL_PASSWORD: cobranca
+    volumes:
+      - cobranca-db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   db:
     image: mysql:8.4
     container_name: estuda-fit-hub-db
@@ -40,3 +77,4 @@ services:
 
 volumes:
   db-data:
+  cobranca-db-data:

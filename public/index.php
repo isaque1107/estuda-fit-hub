@@ -5,6 +5,7 @@ declare(strict_types=1);
 require __DIR__ . '/../bootstrap.php';
 
 use EstudaFitHub\Controllers\AlunoController;
+use EstudaFitHub\Controllers\AvisoDeCobrancaController;
 use EstudaFitHub\Controllers\CheckinController;
 use EstudaFitHub\Controllers\MatriculaController;
 use EstudaFitHub\Controllers\PagamentoWebhookController;
@@ -29,6 +30,8 @@ $router->add('POST', '/matriculas/{id}/cancelar', [MatriculaController::class, '
 $router->add('POST', '/checkins', [CheckinController::class, 'registrar']);
 
 $router->add('POST', '/webhooks/pagamento', [PagamentoWebhookController::class, 'receber']);
+
+$router->add('POST', '/avisos/cobranca', [AvisoDeCobrancaController::class, 'inadimplencia']);
 
 $router->add('GET', '/relatorios/inadimplencia', [RelatorioController::class, 'inadimplencia']);
 $router->add('GET', '/relatorios/receita', [RelatorioController::class, 'receita']);
