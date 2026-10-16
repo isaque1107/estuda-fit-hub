@@ -11,7 +11,7 @@ final class FalhaDeAssercao extends RuntimeException
 
 abstract class TestCase
 {
-    private const TABELAS = ['pagamentos', 'faturas'];
+    private const TABELAS = ['caixa_de_saida', 'pagamentos', 'faturas'];
 
     private static int $sequencia = 0;
 
@@ -118,6 +118,11 @@ abstract class TestCase
     protected function contarPagamentos(): int
     {
         return (int) (Database::buscarUm('SELECT COUNT(*) AS total FROM pagamentos')['total'] ?? 0);
+    }
+
+    protected function avisosNaCaixa(): array
+    {
+        return Database::buscarTodos('SELECT * FROM caixa_de_saida ORDER BY id');
     }
 
     protected function diasAtras(int $dias): string

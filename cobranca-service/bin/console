@@ -5,12 +5,14 @@ declare(strict_types=1);
 
 require __DIR__ . '/../bootstrap.php';
 
+use Cobranca\Console\Entrega;
 use Cobranca\Console\Migrar;
 use Cobranca\Console\Varredura;
 
 $comandos = [
     'db:migrate' => Migrar::class,
     'cobranca:varredura' => Varredura::class,
+    'cobranca:entregar-avisos' => Entrega::class,
 ];
 
 $nome = $argv[1] ?? '';

@@ -1,4 +1,4 @@
-.PHONY: up down logs migrate seed test smoke faturas vencidas regua shell cobranca-migrate cobranca-varredura cobranca-test
+.PHONY: up down logs migrate seed test smoke faturas vencidas regua shell cobranca-migrate cobranca-varredura cobranca-entrega cobranca-test
 
 up:
 	docker compose up -d --build
@@ -38,6 +38,9 @@ cobranca-migrate:
 
 cobranca-varredura:
 	docker compose exec cobranca php bin/console cobranca:varredura
+
+cobranca-entrega:
+	docker compose exec cobranca php bin/console cobranca:entregar-avisos
 
 cobranca-test:
 	docker compose exec cobranca php tests/run.php

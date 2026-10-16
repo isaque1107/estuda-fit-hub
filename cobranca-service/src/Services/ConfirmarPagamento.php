@@ -7,7 +7,6 @@ namespace Cobranca\Services;
 use Cobranca\Enums\ResultadoDaConfirmacao;
 use Cobranca\Support\Database;
 use Cobranca\Support\HttpException;
-use Throwable;
 
 final class ConfirmarPagamento
 {
@@ -41,25 +40,16 @@ final class ConfirmarPagamento
         }
 
         $this->registrar($fatura, $dados);
-        $this->avisarOMonolito((int) $fatura['aluno_id']);
 
         return ResultadoDaConfirmacao::Pago;
-    }
-
-    private function avisarOMonolito(int $alunoId): void
-    {
-        try {
-            $this->aviso->paraOAluno($alunoId);
-        } catch (Throwable $erro) {
-            error_log(sprintf('aviso imediato falhou para o aluno %d: %s', $alunoId, $erro->getMessage()));
-        }
     }
 
     private function registrar(array $fatura, array $dados): void
     {
         $pagoEm = $this->momentoDoPagamento($dados);
+        $aviso = $this->aviso;
 
-        Database::transacao(static function () use ($fatura, $dados, $pagoEm): void {
+        Database::transacao(static function () use ($fatura, $dados, $pagoEm, $aviso): void {
             Database::executar(
                 "UPDATE faturas SET status = 'paga', pago_em = ? WHERE id = ? AND status <> 'paga'",
                 [$pagoEm, $fatura['id']],
@@ -71,6 +61,8 @@ final class ConfirmarPagamento
                 'metodo' => (string) ($dados['method'] ?? 'desconhecido'),
                 'gateway_payload' => json_encode($dados, JSON_UNESCAPED_UNICODE),
             ]);
+
+            $aviso->paraOAluno((int) $fatura['aluno_id']);
         });
     }
 

@@ -3,17 +3,11 @@
 declare(strict_types=1);
 
 use Cobranca\Enums\ResultadoDaConfirmacao;
-use Cobranca\Services\AvisarInadimplencia;
 use Cobranca\Services\ConfirmarPagamento;
 use Cobranca\Support\HttpException;
 
 final class ConfirmarPagamentoTest extends TestCase
 {
-    private function servico(NotificadorEmMemoria $notificador): ConfirmarPagamento
-    {
-        return new ConfirmarPagamento(new AvisarInadimplencia($notificador));
-    }
-
     private function aviso(array $fatura, string $situacao = 'approved'): array
     {
         return [
@@ -29,7 +23,7 @@ final class ConfirmarPagamentoTest extends TestCase
     {
         $fatura = $this->emitirFatura();
 
-        $resultado = $this->servico(new NotificadorEmMemoria())->executar($this->aviso($fatura));
+        $resultado = (new ConfirmarPagamento())->executar($this->aviso($fatura));
 
         $this->assertSame(ResultadoDaConfirmacao::Pago, $resultado);
         $this->assertSame('paga', $this->buscarFatura((int) $fatura['id'])['status']);
@@ -42,8 +36,8 @@ final class ConfirmarPagamentoTest extends TestCase
         $fatura = $this->emitirFatura();
         $aviso = $this->aviso($fatura);
 
-        $this->assertSame(ResultadoDaConfirmacao::Pago, $this->servico(new NotificadorEmMemoria())->executar($aviso));
-        $this->assertSame(ResultadoDaConfirmacao::JaEstavaPaga, $this->servico(new NotificadorEmMemoria())->executar($aviso));
+        $this->assertSame(ResultadoDaConfirmacao::Pago, (new ConfirmarPagamento())->executar($aviso));
+        $this->assertSame(ResultadoDaConfirmacao::JaEstavaPaga, (new ConfirmarPagamento())->executar($aviso));
 
         $this->assertSame(1, $this->contarPagamentos());
     }
@@ -52,7 +46,7 @@ final class ConfirmarPagamentoTest extends TestCase
     {
         $fatura = $this->emitirFatura();
 
-        $resultado = $this->servico(new NotificadorEmMemoria())->executar($this->aviso($fatura, 'refused'));
+        $resultado = (new ConfirmarPagamento())->executar($this->aviso($fatura, 'refused'));
 
         $this->assertSame(ResultadoDaConfirmacao::NaoAprovado, $resultado);
         $this->assertSame('aberta', $this->buscarFatura((int) $fatura['id'])['status']);
@@ -63,7 +57,7 @@ final class ConfirmarPagamentoTest extends TestCase
     {
         $this->assertLanca(
             HttpException::class,
-            fn () => $this->servico(new NotificadorEmMemoria())->executar([
+            fn () => (new ConfirmarPagamento())->executar([
                 'reference' => 'gw_inexistente',
                 'status' => 'approved',
             ]),
@@ -71,24 +65,28 @@ final class ConfirmarPagamentoTest extends TestCase
         );
     }
 
-    public function testPagamentoAvisaOMonolitoNaHora(): void
+    public function testPagamentoGravaOAvisoNaCaixaDeSaida(): void
     {
         $fatura = $this->emitirFatura(['aluno_id' => 77]);
-        $notificador = new NotificadorEmMemoria();
 
-        $this->servico($notificador)->executar($this->aviso($fatura));
+        (new ConfirmarPagamento())->executar($this->aviso($fatura));
 
-        $this->assertCount(1, $notificador->avisos);
-        $this->assertSame([77, 0], $notificador->avisos[0]);
+        $avisos = $this->avisosNaCaixa();
+
+        $this->assertCount(1, $avisos);
+        $this->assertSame(77, (int) $avisos[0]['aluno_id']);
+        $this->assertSame(0, (int) $avisos[0]['dias_de_atraso']);
+        $this->assertNull($avisos[0]['entregue_em']);
     }
 
-    public function testMonolitoForaDoArNaoDerrubaOPagamento(): void
+    public function testAvisoDuplicadoNaoGravaSegundoAviso(): void
     {
-        $fatura = $this->emitirFatura(['aluno_id' => 88]);
+        $fatura = $this->emitirFatura();
+        $aviso = $this->aviso($fatura);
 
-        $resultado = $this->servico(new NotificadorEmMemoria(88))->executar($this->aviso($fatura));
+        (new ConfirmarPagamento())->executar($aviso);
+        (new ConfirmarPagamento())->executar($aviso);
 
-        $this->assertSame(ResultadoDaConfirmacao::Pago, $resultado);
-        $this->assertSame('paga', $this->buscarFatura((int) $fatura['id'])['status']);
+        $this->assertCount(1, $this->avisosNaCaixa());
     }
 }

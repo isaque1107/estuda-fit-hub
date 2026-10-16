@@ -4,21 +4,18 @@ declare(strict_types=1);
 
 namespace Cobranca\Services;
 
-use Cobranca\Contracts\NotificadorDeInadimplencia;
 use Cobranca\Support\Database;
-use Cobranca\Support\Monolito;
 
 final class AvisarInadimplencia
 {
-    public function __construct(private readonly NotificadorDeInadimplencia $monolito = new Monolito())
-    {
-    }
-
     public function paraOAluno(int $alunoId): int
     {
         $dias = $this->diasDeAtraso($alunoId);
 
-        $this->monolito->avisarInadimplencia($alunoId, $dias);
+        Database::inserir('caixa_de_saida', [
+            'aluno_id' => $alunoId,
+            'dias_de_atraso' => $dias,
+        ]);
 
         return $dias;
     }
